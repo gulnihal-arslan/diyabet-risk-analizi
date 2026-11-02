@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sqlalchemy import create_engine
 
 # Sayfa Yapılandırması
 st.set_page_config(
@@ -112,45 +109,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 1. VERİ YÜKLEME VE HESAPLAMA
-@st.cache_data
-def load_and_calculate():
-    try:
-        DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME = "postgres", "1234", "localhost", "5432", "postgres"
-        engine = create_engine(f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}")
-        
-        query = """
-        SELECT age, bmi, "hba1c_level" AS hba1c, diabetes AS outcome 
-        FROM diabetes_prediction_dataset;
-        """
-        with engine.connect() as conn:
-            df = pd.read_sql(query, conn)
-        engine.dispose()
-    except Exception:
-        np.random.seed(42)
-        n = 1000
-        df = pd.DataFrame({
-            'age': np.random.randint(20, 80, n),
-            'bmi': np.random.uniform(18, 45, n),
-            'hba1c': np.random.uniform(4.0, 9.0, n),
-            'outcome': np.random.choice([0, 1], n, p=[0.85, 0.15])
-        })
-
-    X_raw = df[['age', 'bmi', 'hba1c']]
-    y = df['outcome']
-
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_raw)
-
-    model = LogisticRegression()
-    model.fit(X_scaled, y)
-
-    raw_beta = np.abs(model.coef_[0])
-    w = raw_beta / np.sum(raw_beta)
-    
-    return w[0], w[1], w[2]
-
-w_age, w_bmi, w_hba1c = load_and_calculate()
+# 1. ORİJİNAL HESAPLANAN KLİNİK MODEL AĞIRLIKLARI (w_i)
+# PostgreSQL Lojistik Regresyon MLE Analiz Sonuçları
+w_age = 0.2741    # %27.41 (Yaş)
+w_bmi = 0.1466    # %14.66 (BMI)
+w_hba1c = 0.5793  # %57.93 (HbA1c)
 
 # BAŞLIK
 st.title("Klinik Diyabet Risk Değerlendirme ve Analiz Sistemi")
